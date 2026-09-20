@@ -9,12 +9,12 @@ interface Props {
 
 export default function Section({ title, action, children, className = '' }: Props) {
   return (
-    <section className={`rounded-md border border-line bg-panel ${className}`}>
-      <header className="flex items-center justify-between gap-3 border-b border-line px-4 py-3">
-        <h2 className="text-[15px] font-semibold text-ink">{title}</h2>
+    <section className={`rounded-xl border border-slate-200/90 bg-white shadow-card overflow-hidden ${className}`}>
+      <header className="flex items-center justify-between gap-3 border-b border-slate-100 px-5 py-3.5 bg-slate-50/50">
+        <h2 className="text-[15px] font-bold text-slate-800 tracking-tight">{title}</h2>
         {action}
       </header>
-      <div className="p-4">{children}</div>
+      <div className="p-5">{children}</div>
     </section>
   );
 }

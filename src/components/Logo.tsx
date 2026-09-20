@@ -1,13 +1,20 @@
-/** Project logo placeholder – replace this SVG (or use an <img>) with your own logo. */
-export default function Logo({ className = 'h-8 w-8' }: { className?: string }) {
+export default function Logo({ className = 'h-8' }: { className?: string }) {
   return (
-    <svg viewBox="0 0 48 48" className={className} role="img" aria-label="Project logo placeholder">
-      <rect x="1" y="1" width="46" height="46" rx="6" fill="#20272e" stroke="#2b333b" />
-      <path d="M13 17h22M13 31h22" stroke="#5aa9e6" strokeWidth="2.5" strokeLinecap="square" />
-      <circle cx="13" cy="24" r="7" fill="#12161a" stroke="#5aa9e6" strokeWidth="2.5" />
-      <circle cx="35" cy="24" r="7" fill="#12161a" stroke="#5aa9e6" strokeWidth="2.5" />
-      <circle cx="13" cy="24" r="1.8" fill="#f0a21b" />
-      <circle cx="35" cy="24" r="1.8" fill="#f0a21b" />
-    </svg>
+    <div className={`flex items-center gap-1.5 font-sans font-bold tracking-tight text-white select-none ${className}`}>
+      <span className="relative flex items-center justify-center text-2xl">
+        <span className="font-extrabold text-white text-[26px]">O</span>
+        <svg
+          viewBox="0 0 32 32"
+          className="absolute -top-1 -left-1 w-9 h-9 pointer-events-none stroke-white/80"
+          fill="none"
+          strokeWidth="2.2"
+        >
+          <ellipse cx="16" cy="16" rx="14.5" ry="6.5" transform="rotate(-30 16 16)" />
+        </svg>
+      </span>
+      <span className="text-[21px] font-semibold tracking-tight ml-0.5 text-white">
+        rbit
+      </span>
+    </div>
   );
 }

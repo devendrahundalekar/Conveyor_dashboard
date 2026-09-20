@@ -94,4 +94,4 @@ export interface Alert {
   severity: 'Warning' | 'Critical';
 }
 
-export type Scenario = 'normal' | 'warning' | 'critical';
+export type Scenario = 'normal' | 'warning' | 'critical' | 'custom';

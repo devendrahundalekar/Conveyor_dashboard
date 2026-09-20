@@ -30,8 +30,8 @@ export function evaluate(value: number, l: Limits): Status {
 
 /** Full class names so Tailwind can see them. */
 export const TONE: Record<Status, { text: string; bg: string; border: string; soft: string; hex: string }> = {
-  NORMAL: { text: 'text-ok', bg: 'bg-ok', border: 'border-ok', soft: 'bg-ok/10', hex: '#3fb96a' },
-  WARNING: { text: 'text-warn', bg: 'bg-warn', border: 'border-warn', soft: 'bg-warn/10', hex: '#f0a21b' },
+  NORMAL: { text: 'text-ok', bg: 'bg-ok', border: 'border-ok', soft: 'bg-ok/10', hex: '#10b981' },
+  WARNING: { text: 'text-warn', bg: 'bg-warn', border: 'border-warn', soft: 'bg-warn/10', hex: '#f59e0b' },
   CRITICAL: { text: 'text-crit', bg: 'bg-crit', border: 'border-crit', soft: 'bg-crit/10', hex: '#ef4444' },
 };
 
@@ -42,9 +42,9 @@ export function healthStatus(percent: number): Status {
 }
 
 export const HEALTH_LABEL: Record<Status, string> = {
-  NORMAL: 'HEALTHY',
-  WARNING: 'WARNING',
-  CRITICAL: 'CRITICAL',
+  NORMAL: 'Healthy Belt',
+  WARNING: 'Needs Attention',
+  CRITICAL: 'Belt Failure',
 };
 
 // ---- AI output labels -------------------------------------------------------

@@ -14,20 +14,22 @@ interface Props {
 }
 
 export default function SensorCard({ title, value, digits, unit, status, history, dataKey }: Props) {
-  // Graph is steel blue while normal, and takes the status colour otherwise.
-  const color = status && status !== 'NORMAL' ? TONE[status].hex : '#5aa9e6';
+  // Graph is Orbit blue while normal, and takes the status colour otherwise.
+  const color = status && status !== 'NORMAL' ? TONE[status].hex : '#0b4ea2';
 
   return (
-    <div className="rounded-md border border-line bg-panel p-4">
+    <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-card flex flex-col justify-between">
       <div className="flex items-center justify-between">
-        <h3 className="text-[15px] font-medium text-mute">{title}</h3>
+        <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">{title}</h3>
         {status && <StatusBadge status={status} />}
       </div>
-      <div className="mt-2 font-display text-5xl font-semibold leading-none">
-        {value === null ? '—' : value.toFixed(digits)}
-        <span className="ml-1.5 text-xl font-medium text-mute">{unit}</span>
+      <div className="my-2.5 flex items-baseline">
+        <span className="text-3xl font-extrabold tracking-tight text-slate-800">
+          {value === null ? '—' : value.toFixed(digits)}
+        </span>
+        <span className="ml-1.5 text-xs font-semibold text-slate-500">{unit}</span>
       </div>
-      <div className="mt-3">
+      <div className="mt-1">
         <Sparkline data={history} dataKey={dataKey} color={color} />
       </div>
     </div>

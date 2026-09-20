@@ -4,15 +4,18 @@
 
 @layer base {
   html {
-    color-scheme: dark;
+    color-scheme: light;
   }
+
   body {
     @apply bg-bg font-sans text-ink antialiased;
     font-variant-numeric: tabular-nums;
   }
+
   :focus-visible {
-    @apply outline outline-2 outline-offset-2 outline-steel;
+    @apply outline outline-2 outline-offset-2 outline-brand;
   }
+
   @media (prefers-reduced-motion: reduce) {
     * {
       animation-duration: 0.01ms !important;
