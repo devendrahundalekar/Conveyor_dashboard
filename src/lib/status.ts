@@ -19,6 +19,9 @@ export const LIMITS = {
 } satisfies Record<string, Limits>;
 
 export function evaluate(value: number, l: Limits): Status {
+  if (value === 0) {
+    return 'NORMAL';
+  }
   if ((l.highCrit !== undefined && value >= l.highCrit) || (l.lowCrit !== undefined && value <= l.lowCrit)) {
     return 'CRITICAL';
   }

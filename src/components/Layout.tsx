@@ -5,12 +5,13 @@ import { useAuth } from '../context/AuthContext';
 import { useMonitoring } from '../context/MonitoringContext';
 import Logo from './Logo';
 import DemoControl from './DemoControl';
+import SearchBar from './SearchBar';
+import Footer from './Footer';
 
 export default function Layout() {
   const { user, logout } = useAuth();
   const { error } = useMonitoring();
   const [isFullscreen, setIsFullscreen] = useState(false);
-  const [searchQuery, setSearchQuery] = useState('');
 
   const toggleFullscreen = () => {
     if (!document.fullscreenElement) {
@@ -29,28 +30,15 @@ export default function Layout() {
 
       {/* Main Orbit Blue Header */}
       <header className="sticky top-0 z-30 bg-[#0b4ea2] text-white shadow-md">
-        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-4 px-4 sm:px-6">
+        <div className="mx-auto flex h-14 max-w-7xl items-center justify-between gap-2 sm:gap-4 px-3 sm:px-6">
           {/* Logo */}
-          <Link to="/" className="flex items-center gap-2 focus:outline-none">
+          <Link to="/" className="flex items-center gap-2 focus:outline-none flex-shrink-0">
             <Logo />
           </Link>
 
           {/* Search Bar */}
-          <div className="hidden md:flex flex-1 max-w-lg mx-6">
-            <div className="relative w-full">
-              <span className="absolute inset-y-0 left-0 flex items-center pl-3 pointer-events-none text-white/70">
-                <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
-                </svg>
-              </span>
-              <input
-                type="text"
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Search Orbit"
-                className="w-full rounded-md bg-[#083c7d] py-1.5 pl-9 pr-4 text-sm text-white placeholder-white/60 focus:bg-[#073269] focus:outline-none focus:ring-1 focus:ring-white/40 border border-[#165bb5]"
-              />
-            </div>
+          <div className="flex flex-1 max-w-md md:max-w-lg mx-2 sm:mx-6">
+            <SearchBar />
           </div>
 
           {/* Right Controls: User Greeting, Fullscreen, Logout */}
@@ -179,6 +167,9 @@ export default function Layout() {
         )}
         <Outlet />
       </main>
+
+      {/* Footer */}
+      <Footer />
     </div>
   );
 }

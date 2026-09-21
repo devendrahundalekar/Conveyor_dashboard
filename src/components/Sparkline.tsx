@@ -9,11 +9,12 @@ interface Props {
 
 /** Small real-time trend line for the last N readings. */
 export default function Sparkline({ data, dataKey, color }: Props) {
+  const allZero = data.length === 0 || data.every((d) => !d[dataKey] || d[dataKey] === 0);
   return (
     <div className="h-14" aria-hidden>
       <ResponsiveContainer width="100%" height="100%">
         <LineChart data={data} margin={{ top: 4, right: 2, bottom: 4, left: 2 }}>
-          <YAxis hide domain={['auto', 'auto']} />
+          <YAxis hide domain={allZero ? [-1, 1] : ['auto', 'auto']} />
           <Line type="monotone" dataKey={dataKey} stroke={color} strokeWidth={1.75} dot={false} isAnimationActive={false} />
         </LineChart>
       </ResponsiveContainer>

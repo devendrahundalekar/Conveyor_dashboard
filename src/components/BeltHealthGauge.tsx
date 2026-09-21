@@ -1,16 +1,17 @@
 import { HEALTH_LABEL, healthStatus } from '../lib/status';
 
 export default function BeltHealthGauge({ value }: { value: number | null }) {
+  const isIdle = value === 0;
   const pctValue = value === null ? 85 : Math.max(0, Math.min(100, value));
-  const status = value === null ? 'NORMAL' : healthStatus(pctValue);
+  const status = isIdle ? 'NORMAL' : (value === null ? 'NORMAL' : healthStatus(pctValue));
 
   // Status mapping
-  const isWarning = status === 'WARNING';
-  const isCritical = status === 'CRITICAL';
+  const isWarning = !isIdle && status === 'WARNING';
+  const isCritical = !isIdle && status === 'CRITICAL';
 
   // 100% health points left (green/normal), lower health points right (red/critical)
   // angle in degrees where 180 = far left, 0 = far right
-  const angleDeg = 180 - ((100 - pctValue) / 100) * 180;
+  const angleDeg = isIdle ? 180 : 180 - ((100 - pctValue) / 100) * 180;
   const needleRad = (angleDeg * Math.PI) / 180;
 
   const cx = 120;
@@ -57,7 +58,7 @@ export default function BeltHealthGauge({ value }: { value: number | null }) {
         </div>
         <div>
           <span className="text-[17px] font-bold text-[#0b4ea2] tracking-tight block">
-            {HEALTH_LABEL[status]}
+            {isIdle ? 'Conveyor Stopped' : HEALTH_LABEL[status]}
           </span>
           <span className="text-xs text-slate-500 font-medium">
             Health: {pctValue}%
@@ -70,10 +71,10 @@ export default function BeltHealthGauge({ value }: { value: number | null }) {
         {/* Status text above needle */}
         <span
           className={`text-sm font-bold tracking-wide mb-1 ${
-            isCritical ? 'text-red-500' : isWarning ? 'text-amber-600' : 'text-emerald-600'
+            isIdle ? 'text-slate-500' : isCritical ? 'text-red-500' : isWarning ? 'text-amber-600' : 'text-emerald-600'
           }`}
         >
-          {status === 'WARNING' ? 'Needs Attention' : status === 'CRITICAL' ? 'Critical Failure' : 'Optimal Health'}
+          {isIdle ? 'Conveyor Idle (0%)' : status === 'WARNING' ? 'Needs Attention' : status === 'CRITICAL' ? 'Critical Failure' : 'Optimal Health'}
         </span>
 
         <svg viewBox="0 0 240 120" className="w-56 h-28 overflow-visible" role="img" aria-label={`Health gauge ${pctValue}%`}>

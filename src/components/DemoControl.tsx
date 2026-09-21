@@ -13,7 +13,7 @@ const DEFECT_OPTIONS: { label: string; value: ImageClass }[] = [
 ];
 
 export default function DemoControl() {
-  const { scenario, setScenario, customData, updateCustomData } = useMonitoring();
+  const { scenario, setScenario, customData, updateCustomData, isDemoRunning, startDemo, stopDemo } = useMonitoring();
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<'presets' | 'custom'>('presets');
 
@@ -126,24 +126,41 @@ export default function DemoControl() {
 
   return (
     <>
-      {/* Interactive Trigger Button */}
-      <button
-        type="button"
-        onClick={() => setIsOpen(true)}
-        className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#0b4ea2] cursor-pointer ${pillStyle}`}
-        title="Click to change demo scenario or input custom sensor data"
-      >
-        <span className={`w-2 h-2 rounded-full ${dotStyle}`} />
-        <span>Demo: <strong className="font-bold">{scenarioLabel}</strong></span>
-        <svg
-          className="w-3.5 h-3.5 ml-0.5 text-slate-500"
-          fill="none"
-          stroke="currentColor"
-          viewBox="0 0 24 24"
+      <div className="flex items-center gap-2">
+        {/* Start / Stop Demo Button */}
+        <button
+          type="button"
+          onClick={isDemoRunning ? stopDemo : startDemo}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-bold border shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 cursor-pointer ${
+            isDemoRunning
+              ? 'border-rose-300 bg-rose-50 text-rose-700 hover:bg-rose-100 ring-1 ring-rose-200 focus:ring-rose-400'
+              : 'border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100 ring-1 ring-emerald-200 focus:ring-emerald-400'
+          }`}
+          title={isDemoRunning ? 'Click to Stop Demo' : 'Click to Start Demo'}
         >
-          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
-        </svg>
-      </button>
+          <span className={`w-2 h-2 rounded-full ${isDemoRunning ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'}`} />
+          <span>{isDemoRunning ? 'Stop Demo' : 'Start Demo'}</span>
+        </button>
+
+        {/* Interactive Trigger Button */}
+        <button
+          type="button"
+          onClick={() => setIsOpen(true)}
+          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold border shadow-sm transition-all focus:outline-none focus:ring-2 focus:ring-offset-1 focus:ring-[#0b4ea2] cursor-pointer ${pillStyle}`}
+          title="Click to change demo scenario or input custom sensor data"
+        >
+          <span className={`w-2 h-2 rounded-full ${isDemoRunning ? dotStyle : 'bg-slate-400'}`} />
+          <span>Scenario: <strong className="font-bold">{scenarioLabel}</strong></span>
+          <svg
+            className="w-3.5 h-3.5 ml-0.5 text-slate-500"
+            fill="none"
+            stroke="currentColor"
+            viewBox="0 0 24 24"
+          >
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M19 9l-7 7-7-7" />
+          </svg>
+        </button>
+      </div>
 
       {/* Centered Modal Overlay */}
       {isOpen && (
@@ -172,6 +189,30 @@ export default function DemoControl() {
                 aria-label="Close"
               >
                 ✕
+              </button>
+            </div>
+
+            {/* Demo Status & Controls */}
+            <div className="flex items-center justify-between p-3 rounded-xl bg-slate-50 border border-slate-200 mb-4">
+              <div className="flex items-center gap-2.5">
+                <span className={`w-2.5 h-2.5 rounded-full ${isDemoRunning ? 'bg-emerald-500 animate-pulse' : 'bg-slate-400'}`} />
+                <div>
+                  <div className="text-xs font-bold text-slate-800">
+                    Continuous Demo: {isDemoRunning ? 'Running' : 'Stopped'}
+                  </div>
+                  <div className="text-[11px] text-slate-500">
+                    {isDemoRunning ? 'Telemetry sensor streaming active' : 'Sensor stream paused (click Start Demo)'}
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={isDemoRunning ? stopDemo : startDemo}
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold text-white transition-all cursor-pointer ${
+                  isDemoRunning ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
+                }`}
+              >
+                {isDemoRunning ? 'Stop Demo' : 'Start Demo'}
               </button>
             </div>
 

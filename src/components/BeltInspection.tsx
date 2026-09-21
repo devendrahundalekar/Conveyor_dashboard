@@ -1,4 +1,4 @@
-import { useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { useMonitoring } from '../context/MonitoringContext';
 import { useCamera } from '../hooks/useCamera';
 import { IMAGE_LABEL, IMAGE_SEVERITY, pct, SEVERITY_STATUS, TONE } from '../lib/status';
@@ -78,8 +78,143 @@ export default function BeltInspection() {
   const { capture, setCapture, inspection, analyze } = useMonitoring();
   const cam = useCamera();
   const sampleRef = useRef<HTMLImageElement>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+  const insertedVideoRef = useRef<HTMLVideoElement>(null);
+  const insertedImageRef = useRef<HTMLImageElement>(null);
+
+  const [insertedMedia, setInsertedMedia] = useState<{
+    type: 'image' | 'video';
+    url: string;
+    name: string;
+  } | null>(null);
+
+  useEffect(() => {
+    return () => {
+      if (insertedMedia?.url) {
+        URL.revokeObjectURL(insertedMedia.url);
+      }
+    };
+  }, [insertedMedia]);
+
+  const handleToggleCamera = () => {
+    if (cam.active) {
+      cam.stop();
+    } else {
+      if (insertedMedia?.url) {
+        URL.revokeObjectURL(insertedMedia.url);
+        setInsertedMedia(null);
+      }
+      cam.start();
+    }
+  };
+
+  const handleInsertClick = () => {
+    fileInputRef.current?.click();
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (cam.active) {
+      cam.stop();
+    }
+
+    if (insertedMedia?.url) {
+      URL.revokeObjectURL(insertedMedia.url);
+    }
+
+    const url = URL.createObjectURL(file);
+    const isVideo = file.type.startsWith('video/');
+
+    if (isVideo) {
+      setInsertedMedia({ type: 'video', url, name: file.name });
+    } else {
+      setInsertedMedia({ type: 'image', url, name: file.name });
+
+      const img = new Image();
+      img.onload = () => {
+        const width = img.naturalWidth || 640;
+        const height = img.naturalHeight || 360;
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        if (ctx) {
+          ctx.drawImage(img, 0, 0, width, height);
+          canvas.toBlob((blob) => {
+            if (blob) {
+              setCapture({
+                dataUrl: canvas.toDataURL('image/jpeg', 0.92),
+                blob,
+                width,
+                height,
+                source: 'sample',
+                capturedAt: Date.now(),
+              });
+            }
+          }, 'image/jpeg', 0.92);
+        }
+      };
+      img.src = url;
+    }
+
+    e.target.value = '';
+  };
 
   const onCapture = async () => {
+    if (insertedMedia?.type === 'video' && insertedVideoRef.current) {
+      const video = insertedVideoRef.current;
+      const width = video.videoWidth || 640;
+      const height = video.videoHeight || 360;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(video, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            setCapture({
+              dataUrl: canvas.toDataURL('image/jpeg', 0.92),
+              blob,
+              width,
+              height,
+              source: 'camera',
+              capturedAt: Date.now(),
+            });
+          }
+        }, 'image/jpeg', 0.92);
+      }
+      return;
+    }
+
+    if (insertedMedia?.type === 'image' && insertedImageRef.current) {
+      const img = insertedImageRef.current;
+      const width = img.naturalWidth || 640;
+      const height = img.naturalHeight || 360;
+      const canvas = document.createElement('canvas');
+      canvas.width = width;
+      canvas.height = height;
+      const ctx = canvas.getContext('2d');
+      if (ctx) {
+        ctx.drawImage(img, 0, 0, width, height);
+        canvas.toBlob((blob) => {
+          if (blob) {
+            setCapture({
+              dataUrl: canvas.toDataURL('image/jpeg', 0.92),
+              blob,
+              width,
+              height,
+              source: 'sample',
+              capturedAt: Date.now(),
+            });
+          }
+        }, 'image/jpeg', 0.92);
+      }
+      return;
+    }
+
     const frame = await cam.grabFrame(sampleRef.current);
     if (frame) setCapture(frame);
   };
@@ -88,32 +223,65 @@ export default function BeltInspection() {
 
   return (
     <div className="space-y-4">
-      <div className="grid gap-4 md:grid-cols-2">
-        {/* Top 1 Video Feed Card */}
-        <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-card">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-bold text-[#0b4ea2]">
-              <span className="flex items-center justify-center w-5 h-5 rounded border border-[#0b4ea2] text-[11px]">
-                ▶
-              </span>
-              <span>Top 1</span>
-            </div>
-            <span className="text-xs font-medium text-slate-500">
-              {cam.active ? '● Live Camera' : 'Sample Feed'}
+      {/* Video / Image Feed Card */}
+      <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-card">
+        <div className="mb-3 flex items-center justify-between">
+          <div className="flex items-center gap-2 text-sm font-bold text-[#0b4ea2]">
+            <span className="flex items-center justify-center w-5 h-5 rounded border border-[#0b4ea2] text-[11px]">
+              ▶
             </span>
+            <span>Top 1</span>
           </div>
+          <span className="text-xs font-medium text-slate-500">
+            {cam.active
+              ? '● Live Camera'
+              : insertedMedia
+              ? `● Inserted ${insertedMedia.type === 'video' ? 'Video' : 'Image'}`
+              : 'Sample Feed'}
+          </span>
+        </div>
 
-          <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-900 aspect-video flex items-center justify-center">
-            <video ref={cam.videoRef} muted playsInline className={cam.active ? 'block h-full w-full object-cover' : 'hidden'} />
-            <img
-              ref={sampleRef}
-              src="/sample-belt.svg"
-              alt="Live conveyor belt feed"
-              className={cam.active ? 'hidden' : 'block h-full w-full object-cover'}
-            />
-            {/* Expand / Fullscreen icon in bottom right */}
+        <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-900 aspect-video flex items-center justify-center">
+          {insertedMedia?.type === 'video' ? (
+            <div className="relative w-full h-full">
+              <video
+                ref={insertedVideoRef}
+                src={insertedMedia.url}
+                autoPlay
+                loop
+                muted
+                playsInline
+                controls
+                className="block h-full w-full object-cover"
+              />
+              {detections.length > 0 && <DetectionOverlay detections={detections} />}
+            </div>
+          ) : insertedMedia?.type === 'image' ? (
+            <div className="relative w-full h-full">
+              <img
+                ref={insertedImageRef}
+                src={insertedMedia.url}
+                alt="Inserted feed"
+                className="block h-full w-full object-cover"
+              />
+              {detections.length > 0 && <DetectionOverlay detections={detections} />}
+            </div>
+          ) : (
+            <div className="relative w-full h-full flex items-center justify-center">
+              <video ref={cam.videoRef} muted playsInline className={cam.active ? 'block h-full w-full object-cover' : 'hidden'} />
+              <img
+                ref={sampleRef}
+                src="/sample-belt.svg"
+                alt="Live conveyor belt feed"
+                className={cam.active ? 'hidden' : 'block h-full w-full object-cover'}
+              />
+              {detections.length > 0 && <DetectionOverlay detections={detections} />}
+            </div>
+          )}
+
+          {!insertedMedia && (
             <button
-              onClick={cam.active ? cam.stop : cam.start}
+              onClick={handleToggleCamera}
               className="absolute bottom-2.5 right-2.5 p-1.5 rounded bg-black/60 text-white/90 hover:text-white hover:bg-black/80 transition-colors"
               title="Toggle Camera Feed"
             >
@@ -121,46 +289,7 @@ export default function BeltInspection() {
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5h-4m4 0v-4m0 4l-5-5" />
               </svg>
             </button>
-          </div>
-        </div>
-
-        {/* Top 2 Video Feed Card */}
-        <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-card">
-          <div className="mb-3 flex items-center justify-between">
-            <div className="flex items-center gap-2 text-sm font-bold text-[#0b4ea2]">
-              <span className="flex items-center justify-center w-5 h-5 rounded border border-[#0b4ea2] text-[11px]">
-                ▶
-              </span>
-              <span>Top 2</span>
-            </div>
-            <span className="text-xs font-medium text-slate-500">
-              {capture ? 'Captured Frame · AI Overlay' : 'Waiting for Capture'}
-            </span>
-          </div>
-
-          <div className="relative overflow-hidden rounded-lg border border-slate-200 bg-slate-900 aspect-video flex items-center justify-center">
-            {capture ? (
-              <div className="relative w-full h-full">
-                <img src={capture.dataUrl} alt="Captured belt" className="h-full w-full object-cover" />
-                {detections.length > 0 && <DetectionOverlay detections={detections} />}
-              </div>
-            ) : (
-              <div className="flex flex-col items-center justify-center text-center p-4 text-slate-400">
-                <svg className="w-8 h-8 mb-2 opacity-50" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M3 9a2 2 0 012-2h.93a2 2 0 001.664-.89l.812-1.22A2 2 0 0110.07 4h3.86a2 2 0 011.664.89l.812 1.22A2 2 0 0018.07 7H19a2 2 0 012 2v9a2 2 0 01-2 2H5a2 2 0 01-2-2V9z" />
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.5" d="M15 13a3 3 0 11-6 0 3 3 0 016 0z" />
-                </svg>
-                <span className="text-xs font-medium">No frame captured. Click Capture Image below.</span>
-              </div>
-            )}
-
-            {/* Expand icon in bottom right */}
-            <div className="absolute bottom-2.5 right-2.5 p-1.5 rounded bg-black/60 text-white/90">
-              <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M4 8V4m0 0h4M4 4l5 5m11-5h-4m4 0v4m0-4l-5 5M4 16v4m0 0h4m-4 0l5-5m11 5h-4m4 0v-4m0 4l-5-5" />
-              </svg>
-            </div>
-          </div>
+          )}
         </div>
       </div>
 
@@ -174,8 +303,18 @@ export default function BeltInspection() {
 
         <div className="flex flex-wrap items-center justify-between gap-3">
           <div className="flex flex-wrap gap-2.5">
-            <button className={secondary} onClick={cam.active ? cam.stop : cam.start}>
+            <button className={secondary} onClick={handleToggleCamera}>
               {cam.active ? 'Stop Camera' : 'Start Camera'}
+            </button>
+            <input
+              ref={fileInputRef}
+              type="file"
+              accept="image/*,video/*"
+              className="hidden"
+              onChange={handleFileChange}
+            />
+            <button className={secondary} onClick={handleInsertClick}>
+              Insert
             </button>
             <button className={secondary} onClick={onCapture}>
               Capture Image

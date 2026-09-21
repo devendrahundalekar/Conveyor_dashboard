@@ -1,5 +1,5 @@
-import { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useState, useEffect } from 'react';
+import { Link, useSearchParams } from 'react-router-dom';
 import AlertsTable from '../components/AlertsTable';
 import BeltHealthGauge from '../components/BeltHealthGauge';
 import BeltInspection from '../components/BeltInspection';
@@ -7,13 +7,31 @@ import PredictionPanel from '../components/PredictionPanel';
 import Section from '../components/Section';
 import SensorCard from '../components/SensorCard';
 import VibrationAnalysis from '../components/VibrationAnalysis';
+import { CONFIG } from '../config';
 import { useMonitoring } from '../context/MonitoringContext';
 import { evaluate, LIMITS } from '../lib/status';
 
 export default function Dashboard() {
-  const { telemetry: t, history, alerts } = useMonitoring();
+  const { telemetry: t, history, alerts, isDemoRunning, startDemo, stopDemo } = useMonitoring();
   const [actionText, setActionText] = useState('');
   const [actionSuccess, setActionSuccess] = useState<string | null>(null);
+  const [searchParams] = useSearchParams();
+
+  useEffect(() => {
+    const scrollTarget = searchParams.get('scroll');
+    if (scrollTarget) {
+      setTimeout(() => {
+        const el = document.getElementById(scrollTarget);
+        if (el) {
+          el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+          el.classList.add('ring-2', 'ring-[#0b4ea2]', 'ring-offset-2');
+          setTimeout(() => {
+            el.classList.remove('ring-2', 'ring-[#0b4ea2]', 'ring-offset-2');
+          }, 2500);
+        }
+      }, 150);
+    }
+  }, [searchParams]);
 
   const handleActionSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -24,19 +42,27 @@ export default function Dashboard() {
   };
 
   // Derive defect counts from existing alerts / telemetry
-  const defectCounts = {
-    edge: alerts.filter((a) => a.detection.toLowerCase().includes('edge')).length || 3,
-    scratch: alerts.filter((a) => a.detection.toLowerCase().includes('scratch')).length || 3,
-    crack: alerts.filter((a) => a.detection.toLowerCase().includes('crack')).length || 4,
-  };
+  const defectCounts = isDemoRunning
+    ? {
+        edge: alerts.filter((a) => a.detection.toLowerCase().includes('edge')).length || 3,
+        scratch: alerts.filter((a) => a.detection.toLowerCase().includes('scratch')).length || 3,
+        crack: alerts.filter((a) => a.detection.toLowerCase().includes('crack')).length || 4,
+      }
+    : {
+        edge: 0,
+        scratch: 0,
+        crack: 0,
+      };
 
   // Display alerts for the top banner
-  const displayAlerts = alerts.length >= 2
-    ? alerts.slice(0, 2)
-    : [
-        { id: 'sample-1', detection: 'Tear, Scratch & Crack detected', timeAgo: '45 min ago' },
-        { id: 'sample-2', detection: 'Edge Defect detected', timeAgo: '20 min ago' },
-      ];
+  const displayAlerts = isDemoRunning
+    ? alerts.length >= 2
+      ? alerts.slice(0, 2)
+      : [
+          { id: 'sample-1', detection: 'Tear, Scratch & Crack detected', timeAgo: '45 min ago' },
+          { id: 'sample-2', detection: 'Edge Defect detected', timeAgo: '20 min ago' },
+        ]
+    : [];
 
   return (
     <div className="space-y-4">
@@ -53,21 +79,33 @@ export default function Dashboard() {
             </span>
           </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            {displayAlerts.map((alt, idx) => (
-              <div
-                key={alt.id ?? idx}
-                className="bg-[#e76059] text-white p-3 rounded-lg shadow-sm flex flex-col justify-between"
-              >
-                <div className="font-bold text-sm tracking-tight leading-snug">
-                  {alt.detection}
+          {displayAlerts.length > 0 ? (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+              {displayAlerts.map((alt, idx) => (
+                <div
+                  key={alt.id ?? idx}
+                  className="bg-[#e76059] text-white p-3 rounded-lg shadow-sm flex flex-col justify-between"
+                >
+                  <div className="font-bold text-sm tracking-tight leading-snug">
+                    {alt.detection}
+                  </div>
+                  <div className="text-xs text-white/80 font-medium mt-2">
+                    {'timeAgo' in alt ? alt.timeAgo : 'Just now'}
+                  </div>
                 </div>
-                <div className="text-xs text-white/80 font-medium mt-2">
-                  {'timeAgo' in alt ? alt.timeAgo : 'Just now'}
-                </div>
+              ))}
+            </div>
+          ) : (
+            <div className="p-3.5 rounded-lg bg-emerald-50 border border-emerald-200 text-emerald-800 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+                <span className="text-xs font-bold">No active alerts · System Normal</span>
               </div>
-            ))}
-          </div>
+              <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-2 py-0.5 rounded">
+                0 Alerts
+              </span>
+            </div>
+          )}
         </div>
 
         {/* Enter Action Quick Input (from screenshot) */}
@@ -123,7 +161,24 @@ export default function Dashboard() {
 
           <div className="mt-3 flex items-center justify-between text-xs text-slate-500 font-medium">
             <span>Plant-01 · CV-04 Iron Ore Main Overland Line</span>
-            <span>Speed: {t?.rpm ?? 820} RPM</span>
+            <div className="flex items-center gap-2.5">
+              <span>Speed: {t?.rpm ?? 820} RPM</span>
+              {CONFIG.USE_MOCK && (
+                <button
+                  type="button"
+                  onClick={isDemoRunning ? stopDemo : startDemo}
+                  className={`px-2.5 py-1 rounded text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                    isDemoRunning
+                      ? 'bg-rose-50 text-rose-700 hover:bg-rose-100 border border-rose-200'
+                      : 'bg-emerald-50 text-emerald-700 hover:bg-emerald-100 border border-emerald-200'
+                  }`}
+                  title={isDemoRunning ? 'Stop continuous telemetry' : 'Start continuous telemetry'}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full ${isDemoRunning ? 'bg-rose-500 animate-pulse' : 'bg-emerald-500'}`} />
+                  <span>{isDemoRunning ? 'Stop Demo' : 'Start Demo'}</span>
+                </button>
+              )}
+            </div>
           </div>
         </div>
       </div>
@@ -138,7 +193,10 @@ export default function Dashboard() {
         {/* Right: Health Status, Defect type Shift, Material on belt */}
         <div className="lg:col-span-5 space-y-4">
           {/* Health Status Card with Semicircular Needle Gauge */}
-          <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-card">
+          <div
+            id="sensor-belt_health"
+            className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-card scroll-mt-20 transition-all duration-300"
+          >
             <div className="flex items-center justify-between border-b border-slate-100 pb-2.5 mb-2">
               <span className="text-[#0b4ea2] text-sm font-bold flex items-center gap-1.5">
                 <span className="text-amber-500">⚡</span>
@@ -210,10 +268,10 @@ export default function Dashboard() {
               </div>
               <div className="bg-slate-700 text-white rounded-lg p-2.5">
                 <div className="text-sm font-bold">
-                  {t?.load && t.load > 1 ? 'Iron Ore (Loaded)' : 'Empty belt'}
+                  {isDemoRunning && t?.load && t.load > 1 ? 'Iron Ore (Loaded)' : 'Empty belt (Idle)'}
                 </div>
                 <div className="text-xs text-white/70 mt-0.5">
-                  {t?.load ? `${t.load.toFixed(1)} kg chute feed` : '1 hr ago'}
+                  {isDemoRunning && t?.load ? `${t.load.toFixed(1)} kg chute feed` : '0 kg · Conveyor stopped'}
                 </div>
               </div>
             </div>

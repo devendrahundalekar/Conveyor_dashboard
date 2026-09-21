@@ -18,7 +18,10 @@ export default function SensorCard({ title, value, digits, unit, status, history
   const color = status && status !== 'NORMAL' ? TONE[status].hex : '#0b4ea2';
 
   return (
-    <div className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-card flex flex-col justify-between">
+    <div
+      id={`sensor-${dataKey}`}
+      className="rounded-xl border border-slate-200/90 bg-white p-4 shadow-card flex flex-col justify-between transition-all duration-300 scroll-mt-20"
+    >
       <div className="flex items-center justify-between">
         <h3 className="text-xs font-bold uppercase tracking-wider text-slate-500">{title}</h3>
         {status && <StatusBadge status={status} />}

@@ -182,6 +182,25 @@ export function mockTelemetry(): Telemetry {
   };
 }
 
+export function zeroTelemetry(): Telemetry {
+  return {
+    rpm: 0,
+    temperature: 0,
+    load: 0,
+    vibration: 0,
+    belt_health: 0,
+    sensor_prediction: 'HEALTHY',
+    image_prediction: 'HEALTHY',
+    confidence: 1.0,
+    overall_status: 'NORMAL',
+    health_prediction: 'HEALTHY',
+    health_confidence: 1.0,
+    recommendation: 'Conveyor idle. Start demo to begin operation.',
+    vibration_waveform: Array.from({ length: 96 }, () => 0),
+    timestamp: Date.now(),
+  };
+}
+
 const delay = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
 export async function mockAnalyze(): Promise<InspectionResult> {

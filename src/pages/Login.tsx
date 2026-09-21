@@ -1,7 +1,6 @@
 import { useState, type FormEvent } from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
 import Logo from '../components/Logo';
-import { CONFIG } from '../config';
 import { useAuth } from '../context/AuthContext';
 
 const input =
@@ -82,10 +81,6 @@ export default function Login() {
           >
             Log in to Dashboard
           </button>
-
-          <div className="mt-5 rounded-lg bg-slate-50 p-3 text-center text-xs text-slate-500 border border-slate-100">
-            Default credentials: <strong className="text-slate-700 font-semibold">{CONFIG.AUTH.username}</strong> / <strong className="text-slate-700 font-semibold">{CONFIG.AUTH.password}</strong>
-          </div>
         </form>
       </div>
     </div>

@@ -37,7 +37,7 @@ export default function VibrationAnalysis({ telemetry }: { telemetry: Telemetry 
               stroke="#64748b"
               tick={{ fontSize: 11 }}
               tickFormatter={(v: number) => v.toFixed(1)}
-              domain={['auto', 'auto']}
+              domain={data.every((d) => d.v === 0) ? [-0.5, 0.5] : ['auto', 'auto']}
             />
             <ReferenceLine y={0} stroke="#cbd5e1" />
             <Line type="monotone" dataKey="v" stroke={color} strokeWidth={2} dot={false} isAnimationActive={false} />

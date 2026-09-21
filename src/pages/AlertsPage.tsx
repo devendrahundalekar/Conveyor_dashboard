@@ -1,9 +1,59 @@
+import { useState, useMemo } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import AlertsTable from '../components/AlertsTable';
 import Section from '../components/Section';
 import { useMonitoring } from '../context/MonitoringContext';
 
 export default function AlertsPage() {
   const { alerts } = useMonitoring();
+  const [searchParams, setSearchParams] = useSearchParams();
+  const urlSearch = searchParams.get('search') || '';
+
+  const [profileFilter, setProfileFilter] = useState('All');
+  const [localSearch, setLocalSearch] = useState(urlSearch);
+
+  // Sync state if URL changes
+  const activeSearch = urlSearch || localSearch;
+
+  const handleSearchChange = (value: string) => {
+    setLocalSearch(value);
+    const newParams = new URLSearchParams(searchParams);
+    if (value.trim()) {
+      newParams.set('search', value);
+    } else {
+      newParams.delete('search');
+    }
+    setSearchParams(newParams, { replace: true });
+  };
+
+  const clearSearch = () => {
+    setLocalSearch('');
+    const newParams = new URLSearchParams(searchParams);
+    newParams.delete('search');
+    setSearchParams(newParams, { replace: true });
+  };
+
+  const filteredAlerts = useMemo(() => {
+    return alerts.filter((a) => {
+      // Profile filter
+      if (profileFilter === 'Camera Vision AI' && !a.source.toLowerCase().includes('camera')) return false;
+      if (profileFilter === 'Vibration Accelerometer' && !a.source.toLowerCase().includes('vibration')) return false;
+      if (profileFilter === 'Temperature Sensor' && !a.source.toLowerCase().includes('temperature')) return false;
+
+      // Text search
+      if (activeSearch.trim()) {
+        const q = activeSearch.toLowerCase().trim();
+        const matchesDetection = a.detection.toLowerCase().includes(q);
+        const matchesSource = a.source.toLowerCase().includes(q);
+        const matchesSeverity = a.severity.toLowerCase().includes(q);
+        if (!matchesDetection && !matchesSource && !matchesSeverity) {
+          return false;
+        }
+      }
+
+      return true;
+    });
+  }, [alerts, profileFilter, activeSearch]);
 
   const total = alerts.length;
   const highSev = alerts.filter((a) => a.severity === 'Critical').length;
@@ -72,27 +122,81 @@ export default function AlertsPage() {
 
       {/* Filter Row */}
       <div className="rounded-xl border border-slate-200/90 bg-white px-4 py-3 shadow-card flex flex-wrap items-center justify-between gap-3">
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-3">
           <select className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700">
             <option>All Plants</option>
             <option>Plant-01 Main Conveyor Line</option>
           </select>
-          <select className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700">
-            <option>All Profiles</option>
-            <option>Camera Vision AI</option>
-            <option>Vibration Accelerometer</option>
-            <option>Temperature Sensor</option>
+          <select
+            value={profileFilter}
+            onChange={(e) => setProfileFilter(e.target.value)}
+            className="rounded-lg border border-slate-300 bg-slate-50 px-3 py-1.5 text-xs font-semibold text-slate-700 focus:outline-none focus:ring-1 focus:ring-[#0b4ea2]"
+          >
+            <option value="All">All Profiles</option>
+            <option value="Camera Vision AI">Camera Vision AI</option>
+            <option value="Vibration Accelerometer">Vibration Accelerometer</option>
+            <option value="Temperature Sensor">Temperature Sensor</option>
           </select>
+
+          {/* In-page search filter box */}
+          <div className="relative">
+            <input
+              type="text"
+              value={activeSearch}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              placeholder="Filter alerts..."
+              className="rounded-lg border border-slate-300 bg-slate-50 pl-7 pr-7 py-1.5 text-xs font-medium text-slate-800 placeholder-slate-400 focus:bg-white focus:outline-none focus:ring-1 focus:ring-[#0b4ea2]"
+            />
+            <svg
+              className="w-3.5 h-3.5 absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none"
+              fill="none"
+              stroke="currentColor"
+              viewBox="0 0 24 24"
+            >
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2.5" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z" />
+            </svg>
+            {activeSearch && (
+              <button
+                type="button"
+                onClick={clearSearch}
+                className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 p-0.5"
+                title="Clear filter"
+              >
+                ✕
+              </button>
+            )}
+          </div>
         </div>
-        <button className="rounded-lg bg-[#0b4ea2] px-4 py-1.5 text-xs font-bold text-white shadow-sm hover:bg-[#083c7d] transition-colors">
-          SHOW ALERTS
-        </button>
+
+        {activeSearch && (
+          <div className="flex items-center gap-2 text-xs">
+            <span className="font-semibold text-slate-600">
+              Matching <span className="text-[#0b4ea2] font-bold">"{activeSearch}"</span>: {filteredAlerts.length} of {total}
+            </span>
+            <button
+              onClick={clearSearch}
+              className="font-bold text-[#0b4ea2] hover:underline"
+            >
+              Reset
+            </button>
+          </div>
+        )}
       </div>
 
       {/* Full Alerts Table */}
-      <Section title="Historical Alerts & Maintenance Incidents">
-        <AlertsTable alerts={alerts} />
+      <Section
+        title="Historical Alerts & Maintenance Incidents"
+        action={
+          activeSearch || profileFilter !== 'All' ? (
+            <span className="text-xs font-semibold text-slate-500">
+              Filtered: {filteredAlerts.length} alerts
+            </span>
+          ) : undefined
+        }
+      >
+        <AlertsTable alerts={filteredAlerts} />
       </Section>
     </div>
   );
 }
+

@@ -6,6 +6,8 @@ import {
   getActiveScenario,
   getCustomData,
   mockAlerts,
+  mockTelemetry,
+  zeroTelemetry,
   setActiveScenario,
   setCustomData as setMockCustomData,
   type CustomSensorData,
@@ -26,6 +28,10 @@ interface MonitoringValue {
   customData: CustomSensorData;
   updateCustomData: (data: Partial<CustomSensorData>) => void;
   refreshNow: () => Promise<void>;
+  isDemoRunning: boolean;
+  startDemo: () => void;
+  stopDemo: () => void;
+  toggleDemo: () => void;
 }
 
 const MonitoringContext = createContext<MonitoringValue | null>(null);
@@ -41,20 +47,86 @@ type SensorKey = keyof typeof SENSOR_ALERT_TEXT;
 let alertCounter = 0;
 const newId = () => `local-${Date.now()}-${alertCounter++}`;
 
+function createZeroHistory(): HistoryPoint[] {
+  const now = Date.now();
+  const step = CONFIG.POLL_MS || 1000;
+  return Array.from({ length: 25 }, (_, i) => ({
+    t: now - (24 - i) * step,
+    rpm: 0,
+    temperature: 0,
+    load: 0,
+    vibration: 0,
+  }));
+}
+
+function createInitialHistory(): HistoryPoint[] {
+  if (!CONFIG.USE_MOCK) return [];
+  const now = Date.now();
+  const step = CONFIG.POLL_MS || 1000;
+  return Array.from({ length: 25 }, (_, i) => {
+    const t = now - (24 - i) * step;
+    const m = mockTelemetry();
+    return {
+      t,
+      rpm: m.rpm,
+      temperature: m.temperature,
+      load: m.load,
+      vibration: m.vibration,
+    };
+  });
+}
+
 /**
  * Holds the live data for every page: telemetry, alerts and the latest image inspection.
  * Swap the data source in services/api.ts – components do not need to change.
  */
 export function MonitoringProvider({ children }: { children: ReactNode }) {
-  const [telemetry, setTelemetry] = useState<Telemetry | null>(null);
-  const [history, setHistory] = useState<HistoryPoint[]>([]);
+  const [telemetry, setTelemetry] = useState<Telemetry | null>(() => (CONFIG.USE_MOCK ? zeroTelemetry() : null));
+  const [history, setHistory] = useState<HistoryPoint[]>(() => (CONFIG.USE_MOCK ? createZeroHistory() : []));
   const [error, setError] = useState<string | null>(null);
-  const [alerts, setAlerts] = useState<Alert[]>(() => (CONFIG.USE_MOCK ? mockAlerts() : []));
+  const [alerts, setAlerts] = useState<Alert[]>([]);
   const [capture, setCaptureState] = useState<Capture | null>(null);
   const [inspection, setInspection] = useState<InspectionState>({ status: 'idle' });
   const [scenario, setScenarioState] = useState<Scenario>(() => getActiveScenario());
   const [customData, setCustomDataState] = useState<CustomSensorData>(() => getCustomData());
+  const [isDemoRunning, setIsDemoRunning] = useState(false);
   const lastStatus = useRef<Partial<Record<SensorKey, Status>>>({});
+
+  const startDemo = useCallback(() => {
+    setIsDemoRunning(true);
+    if (CONFIG.USE_MOCK) {
+      setTelemetry(mockTelemetry());
+      setHistory(createInitialHistory());
+      setAlerts(mockAlerts());
+    }
+  }, []);
+
+  const stopDemo = useCallback(() => {
+    setIsDemoRunning(false);
+    if (CONFIG.USE_MOCK) {
+      setTelemetry(zeroTelemetry());
+      setHistory(createZeroHistory());
+      setAlerts([]);
+    }
+  }, []);
+
+  const toggleDemo = useCallback(() => {
+    setIsDemoRunning((prev) => {
+      const next = !prev;
+      if (CONFIG.USE_MOCK) {
+        if (next) {
+          setTelemetry(mockTelemetry());
+          setHistory(createInitialHistory());
+          setAlerts(mockAlerts());
+        } else {
+          setTelemetry(zeroTelemetry());
+          setHistory(createZeroHistory());
+          setAlerts([]);
+        }
+      }
+      return next;
+    });
+  }, []);
 
   const addAlert = useCallback((a: Omit<Alert, 'id' | 'time'>) => {
     setAlerts((prev) => [{ ...a, id: newId(), time: Date.now() }, ...prev].slice(0, 50));
@@ -81,11 +153,15 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
       setActiveScenario(nextScenario);
       setScenarioState(nextScenario);
       if (CONFIG.USE_MOCK) {
-        setAlerts(mockAlerts());
+        if (isDemoRunning) {
+          setAlerts(mockAlerts());
+          tick();
+        }
+      } else {
+        tick();
       }
-      tick();
     },
-    [tick],
+    [isDemoRunning, tick],
   );
 
   const updateCustomData = useCallback(
@@ -98,12 +174,19 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
     [tick],
   );
 
-  // Telemetry polling
+  // Fetch telemetry once on initial mount only if in real backend mode (mock mode stays zero until started)
   useEffect(() => {
-    tick();
+    if (!CONFIG.USE_MOCK) {
+      tick();
+    }
+  }, [tick]);
+
+  // Telemetry polling: in mock/demo mode, only runs continuously when isDemoRunning is true
+  useEffect(() => {
+    if (CONFIG.USE_MOCK && !isDemoRunning) return;
     const id = setInterval(tick, CONFIG.POLL_MS);
     return () => clearInterval(id);
-  }, [tick]);
+  }, [isDemoRunning, tick]);
 
   // Alerts: real mode polls the backend; demo mode raises alerts when a sensor leaves NORMAL.
   useEffect(() => {
@@ -175,6 +258,10 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
       customData,
       updateCustomData,
       refreshNow: tick,
+      isDemoRunning,
+      startDemo,
+      stopDemo,
+      toggleDemo,
     }),
     [
       telemetry,
@@ -190,6 +277,10 @@ export function MonitoringProvider({ children }: { children: ReactNode }) {
       customData,
       updateCustomData,
       tick,
+      isDemoRunning,
+      startDemo,
+      stopDemo,
+      toggleDemo,
     ],
   );
 
